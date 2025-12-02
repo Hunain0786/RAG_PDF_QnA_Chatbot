@@ -3,7 +3,6 @@ uvicorn[standard]
 numpy
 pypdf
 sentence-transformers
-pinecone-client
 pinecone
 transformers
 torch

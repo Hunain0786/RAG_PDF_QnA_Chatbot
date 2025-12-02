@@ -13,6 +13,16 @@ from rag_engine import answer_question
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # -----------------------------
 # FASTAPI ENDPOINTS
 # -----------------------------
@@ -21,21 +31,16 @@ app = FastAPI()
 async def upload_pdf(pdf: UploadFile = File(...)):
     """Upload a PDF and index it into Pinecone."""
 
-    # Save temporarily
     pdf_path = f"./{pdf.filename}"
     with open(pdf_path, "wb") as f:
         f.write(await pdf.read())
 
-    # 1. Extract text
     text = extract_text(pdf_path)
 
-    # 2. Chunk
     chunks = chunk_text(text)
 
-    # 3. Embed
     embeddings = embedder.encode(chunks).astype(np.float32)
 
-    # 4. Create vector list for Pinecone
     vectors = []
     for i, emb in enumerate(embeddings):
         vectors.append({
@@ -44,10 +49,8 @@ async def upload_pdf(pdf: UploadFile = File(...)):
             "metadata": {"text": chunks[i]}
         })
 
-    # 5. Clear old index
     index.delete(delete_all=True)
 
-    # 6. Upload new vectors
     index.upsert(vectors)
 
     return {
