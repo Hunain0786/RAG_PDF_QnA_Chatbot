@@ -4,8 +4,5 @@ numpy
 pypdf
 sentence-transformers
 pinecone
-transformers
-torch
-python-multipart
-accelerate
+groq
 python-dotenv

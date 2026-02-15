@@ -1,6 +1,6 @@
 # PDF RAG Chatbot API
 
-A Retrieval-Augmented Generation (RAG) API that allows you to upload PDF documents and ask questions about their content. It uses **FastAPI** for the backend, **Pinecone** for vector storage, and **Hugging Face** models for embeddings and text generation.
+A Retrieval-Augmented Generation (RAG) API that allows you to upload PDF documents and ask questions about their content. It uses **FastAPI** for the backend, **Pinecone** for vector storage, **Sentence Transformers** for embeddings, and **Groq** for fast LLM inference.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ graph TD
     subgraph Services
         Embedder["Embedding Model<br/>(all-MiniLM-L6-v2)"]
         Pinecone["Pinecone Vector DB"]
-        LLM["LLM<br/>(Flan-T5)"]
+        LLM["LLM<br/>(Groq)"]
     end
 
     %% Upload Flow
@@ -48,7 +48,7 @@ graph TD
 
 -   **PDF Ingestion**: Upload PDF files to extract text and chunk it for processing.
 -   **Vector Search**: Uses Pinecone to store and retrieve relevant text chunks based on semantic similarity.
--   **Question Answering**: Generates answers using the `google/flan-t5-base` LLM, grounded in the retrieved context.
+-   **Question Answering**: Generates answers using Groq's cloud-hosted LLMs (default: Llama 3.3 70B), grounded in the retrieved context.
 -   **Modular Design**: Clean separation of concerns (API, Config, PDF Processing, RAG Engine).
 
 ## Tech Stack
@@ -56,7 +56,7 @@ graph TD
 -   **Framework**: FastAPI
 -   **Vector Database**: Pinecone
 -   **Embeddings**: `sentence-transformers/all-MiniLM-L6-v2`
--   **LLM**: `google/flan-t5-base`
+-   **LLM**: Groq API (supports Llama 3.3, Mixtral, and other models)
 -   **PDF Processing**: pypdf
 
 ## Installation
@@ -74,10 +74,17 @@ graph TD
     ```
 
 3.  **Set up Environment Variables:**
-    Create a `.env` file in the root directory and add your Pinecone API key:
+    Copy the `.env.example` file to `.env` and add your API keys:
+    ```bash
+    cp .env.example .env
+    ```
+    Then edit `.env` and add your keys:
     ```env
     PINECONE_API_KEY=your_pinecone_api_key_here
+    GROQ_API_KEY=your_groq_api_key_here
     ```
+    
+    Get your Groq API key from: https://console.groq.com/keys
 
 ## Usage
 

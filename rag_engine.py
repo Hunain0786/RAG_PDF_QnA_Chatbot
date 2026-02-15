@@ -1,9 +1,6 @@
 import numpy as np
-from config import embedder, index, tok, llm
+from config import embedder, index, groq_client
 
-# -----------------------------
-# PINECONE RETRIEVAL
-# -----------------------------
 
 def retrieve_chunks(query, top_k=5):
     query_emb = embedder.encode(query).astype(np.float32).tolist()
@@ -18,47 +15,50 @@ def retrieve_chunks(query, top_k=5):
     return chunks
 
 
-# -----------------------------
-# PROMPT + LLM
-# -----------------------------
 
-def build_safe_prompt(query, chunks, max_input_tokens=512):
-
-    base = (
+def build_prompt(query, chunks):
+    """Build a prompt with retrieved context for the LLM."""
+    context = "\n\n".join(chunks)
+    
+    prompt = (
         "Use the context to answer the question in a complete sentence.\n"
         "Provide an explanation if possible.\n"
         "If the answer is not in the context, say 'I don't know.'\n\n"
-        "Context:\n"
+        f"Context:\n{context}\n\n"
+        f"Question: {query}\n"
+        f"Answer:"
     )
-
-    used = []
-    for c in chunks:
-        temp_context = "\n\n".join(used + [c])
-        temp_prompt = f"{base}{temp_context}\n\nQuestion: {query}\nAnswer:"
-
-        tok_len = len(tok(temp_prompt)["input_ids"])
-
-        if tok_len <= max_input_tokens - 50:
-            used.append(c)
-        else:
-            break
-
-    final_context = "\n\n".join(used)
-    final_prompt = f"{base}{final_context}\n\nQuestion: {query}\nAnswer:"
-
-    return final_prompt
+    
+    return prompt
 
 
-def answer_question(query):
+def answer_question(query, model="llama-3.3-70b-versatile"):
+    """
+    Answer a question using RAG with Groq.
+    
+    Args:
+        query: The user's question
+        model: Groq model to use (default: llama-3.3-70b-versatile)
+               Other options: mixtral-8x7b-32768, llama-3.1-8b-instant, etc.
+    """
     chunks = retrieve_chunks(query, top_k=5)
-    prompt = build_safe_prompt(query, chunks, max_input_tokens=512)
-
-    tokens = tok(prompt, return_tensors="pt", truncation=True, max_length=512)
-
-    output = llm.generate(
-        **tokens,
-        max_new_tokens=150,
-        do_sample=False
+    prompt = build_prompt(query, chunks)
+    
+    # Call Groq API
+    response = groq_client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that answers questions based on the provided context."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3,
+        max_tokens=500
     )
-
-    return tok.decode(output[0], skip_special_tokens=True)
+    
+    return response.choices[0].message.content
